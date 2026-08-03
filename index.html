@@ -504,16 +504,22 @@ const CONFIG = {
   /* Token symbol. Leave blank until confirmed and the site will say so. */
   ticker: "",
 
-  /* ---- DEVELOPER ALLOCATION -------------------------------
-     0 = the Committee holds none of its own supply, which is
-     the strongest claim on this page and the one thing no
-     other project can copy. If this ever changes, fill in all
-     three fields — a percentage with no wallet and no stated
-     policy reads worse than either extreme.
+  /* ---- HOLDINGS -------------------------------------------
+     devPct is the DEPLOYER's allocation. Keep it at 0 — that is
+     the claim the chain can verify and the one nobody can copy.
+
+     teamMayBuy: other members buying on the open market like
+     anyone else. This is normal and fine, but only while it is
+     stated up front. If you list wallets in teamWallets they
+     are published for anyone to watch, which is what turns a
+     claim into something checkable.
      --------------------------------------------------------- */
-  devPct: 0,                    // 0 = no allocation. Leave it at 0.
-  devWallet: "",                // public address, watchable by anyone
-  devPolicy: ""                 // e.g. "Locked for 90 days. Any sale announced 48h in advance."
+  devPct: 0,                    // deployer allocation. Leave at 0.
+  devWallet: "",
+  devPolicy: "",
+
+  teamMayBuy: true,             // are other members free to buy?
+  teamWallets: []               // e.g. ["ABC…","DEF…"] — optional but stronger
 };
 
 /* display helpers for the symbol */
@@ -923,9 +929,27 @@ function renderDisclosure(){
 
   let holdings;
   if (!hasAlloc){
-    holdings = "The Committee holds none of its own supply. There is no developer " +
-      "purchase, no presale and no team allocation. Revenue consists solely of creator " +
-      "fees on trading volume — the Committee is compensated for activity, not for price.";
+    holdings = "The deploying wallet holds none of the supply and never will.";
+
+    holdings += "<br><br>The Committee's compensation is creator fees on trading volume, " +
+      "not price. That is a deliberate choice. Fees reward activity and longevity, so our " +
+      "interest is in the Central Bonk still publishing in six months — not in a spike to " +
+      "sell into. A project paid on volume has to stay worth reading.";
+
+    if (CONFIG.teamMayBuy){
+      holdings += "<br><br>Other members of the team may buy " +
+        (TICKER || "the token") + " on the open market, at market prices, like any other " +
+        "participant. They receive no allocation and no preferential terms. " +
+        (CONFIG.teamWallets && CONFIG.teamWallets.length
+          ? "Their wallets are published below and can be watched by anyone."
+          : "Any such purchase will be disclosed here.");
+
+      if (CONFIG.teamWallets && CONFIG.teamWallets.length){
+        holdings += "<br><br>" + CONFIG.teamWallets.map(w =>
+          "<code style='color:var(--gold-hi);font-family:var(--mono);font-size:13px;" +
+          "word-break:break-all'>" + w + "</code>").join("<br>");
+      }
+    }
   } else {
     holdings = "The Committee " + (L ? "holds " : "will take ") +
       (pct === null ? "a disclosed allocation, the size of which will be published before launch"
