@@ -580,7 +580,7 @@ function pickLatestDecision(rows){
 /* Load the published record. Falls back silently to the embedded copy. */
 async function loadReports(){
   try{
-    const r = await fetch("reports.json?v=" + Date.now());   // cache-bust
+    const r = await fetchTimeout("reports.json?v=" + Date.now(), {}, 5000);
     if(!r.ok) throw 0;
     const rows = await r.json();
     if(!Array.isArray(rows) || !rows.length) throw 0;
@@ -616,6 +616,18 @@ const money = n => {
   return "$"+n.toFixed(0);
 };
 
+/* fetch with a hard timeout — a hung request would otherwise leave a card
+   stuck on "Loading" indefinitely, which is worse than showing archived data */
+async function fetchTimeout(url, opts = {}, ms = 8000){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try{
+    return await fetch(url, {...opts, signal: ctrl.signal});
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 /* live values, filled by fetches; fall back to the newest archived report */
 const LIVE = { mcap:null, btcd:null, ethd:null, vol:null, mcapChg:null,
                monia:null, oi:null, legs:null, fng:null, fngPrev:null };
@@ -648,7 +660,7 @@ function tickLaunch(){
    ============================================================ */
 async function fetchGlobal(){
   try{
-    const r = await fetch("https://api.coingecko.com/api/v3/global");
+    const r = await fetchTimeout("https://api.coingecko.com/api/v3/global");
     if(!r.ok) throw 0;
     const d = (await r.json()).data;
     LIVE.mcap    = money(d.total_market_cap.usd);
@@ -662,10 +674,9 @@ async function fetchGlobal(){
     $("pillMkt").textContent="Live"; $("pillMkt").className="pill live";
     set("freshMkt","Fetched live from CoinGecko");
   }catch{
-    const a = ARCHIVE[ARCHIVE.length-1];
     set("d-mcap","$2.2T"); set("d-btcd","56.2%"); set("d-ethd","10.0%"); set("d-vol","$39.3B");
     $("pillMkt").textContent="Archived"; $("pillMkt").className="pill";
-    set("freshMkt","Live feed unavailable · showing published figures for "+a.date);
+    set("freshMkt","Live feed unavailable · published figures for 02 Aug 2026");
   }
 }
 
@@ -676,7 +687,7 @@ const normaliseHL = n => (n.length>1 && n[0]==="k" && n.slice(1)===n.slice(1).to
 
 async function fetchMonia(){
   try{
-    const r = await fetch("https://api.hyperliquid.xyz/info",{
+    const r = await fetchTimeout("https://api.hyperliquid.xyz/info",{
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({type:"metaAndAssetCtxs"})
     });
@@ -713,7 +724,7 @@ async function fetchMonia(){
 
 async function fetchFng(){
   try{
-    const r = await fetch("https://api.alternative.me/fng/?limit=2");
+    const r = await fetchTimeout("https://api.alternative.me/fng/?limit=2");
     if(!r.ok) throw 0;
     const d = (await r.json()).data;
     LIVE.fng = parseInt(d[0].value,10); LIVE.fngPrev = parseInt(d[1].value,10);
