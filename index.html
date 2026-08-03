@@ -488,7 +488,7 @@ footer{border-top:1px solid var(--rule-soft);padding:34px 0 52px}
    CONFIG — the only things you need to touch.
    ============================================================ */
 const CONFIG = {
-  telegram: "https://t.me/",                    // <-- paste invite link
+  telegram: "https://t.me/centralbonkofficial",                    // <-- paste invite link
   launchUTC: "2026-08-04T15:00:00Z",            // 16:00 BST / 11:00 ET
   archiveRotateMs: 9000,
 
@@ -755,12 +755,17 @@ function buildCorridor(){
   const monia = (LIVE.monia !== null) ? LIVE.monia : D.monia;
   const lo = rate-C, hi = rate+C;
   const span = Math.max(C*3, Math.abs(monia-rate)*1.6);
-  const min = rate-span, max = rate+span;
+  // Don't show a negative axis for a policy rate — clamp the floor at zero
+  // unless MONIA itself is negative, which is a real state (shorts paying longs).
+  const min = monia < 0 ? rate-span : Math.max(0, rate-span);
+  const max = rate+span;
   const pos = v => ((v-min)/(max-min))*100;
 
-  $("corridorBand").style.left  = pos(lo)+"%";
-  $("corridorBand").style.width = (pos(hi)-pos(lo))+"%";
-  $("corridorMid").style.left   = pos(rate)+"%";
+  const clamp = v => Math.max(0, Math.min(100, v));
+  const bandL = clamp(pos(lo)), bandR = clamp(pos(hi));
+  $("corridorBand").style.left  = bandL+"%";
+  $("corridorBand").style.width = (bandR-bandL)+"%";
+  $("corridorMid").style.left   = clamp(pos(rate))+"%";
 
   const p = Math.max(0,Math.min(100,pos(monia)));
   const breached = monia<lo || monia>hi;
